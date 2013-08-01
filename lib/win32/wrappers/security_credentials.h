@@ -13,7 +13,6 @@
 #include "../worker.h"
 #include <uv.h>
 #include "../../nan.h"
-
 extern "C" {
   #include "../kerberos_sspi.h"
 }
@@ -45,7 +44,8 @@ class SecurityCredentials : public ObjectWrap {
     static inline bool HasInstance(Handle<Value> val) {
       if (!val->IsObject()) return false;
       Local<Object> obj = val->ToObject();
-      return NanPersistentToLocal(constructor_template)->HasInstance(obj);
+      return true;
+      //return NanPersistentToLocal(constructor_template)->HasInstance(obj);
     };
 
     // Functions available from V8

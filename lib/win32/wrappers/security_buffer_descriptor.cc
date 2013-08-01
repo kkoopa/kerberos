@@ -119,7 +119,7 @@ NAN_METHOD(SecurityBufferDescriptor::New) {
   if(args[0]->IsInt32()) {
     // Create new SecurityBuffer instance
     Local<Value> argv[] = {Int32::New(0x02), args[0]};
-    Handle<Value> security_buffer = SecurityBuffer::constructor_template->GetFunction()->NewInstance(2, argv);
+    Handle<Value> security_buffer = NanPersistentToLocal(SecurityBuffer::constructor_template)->GetFunction()->NewInstance(2, argv);
     // Create a new array
     Local<Array> array = Array::New(1);
     // Set the first value
@@ -129,7 +129,8 @@ NAN_METHOD(SecurityBufferDescriptor::New) {
     // Create descriptor
     security_obj = new SecurityBufferDescriptor(array);
   } else {
-    NanAssignPersistent(Array, arrayObject, Handle<Array>::Cast(args[0]));
+  	Local<Array> array = Handle<Array>::Cast(args[0]);
+    NanAssignPersistent(Array, arrayObject, array);
     security_obj = new SecurityBufferDescriptor(array);
   }
 

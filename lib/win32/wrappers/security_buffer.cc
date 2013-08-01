@@ -99,7 +99,8 @@ void SecurityBuffer::Initialize(Handle<Object> target) {
   // Set up method for the Kerberos instance
   NODE_SET_PROTOTYPE_METHOD(t, "toBuffer", ToBuffer);
 
-  NanAssignPersistent(FunctionTemplate, contstructor_template, t);
+  NanAssignPersistent(FunctionTemplate, constructor_template, t);
+  
 
   // Set up class
   target->Set(String::NewSymbol("SecurityBuffer"), t->GetFunction());  

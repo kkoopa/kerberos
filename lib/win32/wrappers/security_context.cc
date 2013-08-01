@@ -45,7 +45,7 @@ static void After(uv_work_t* work_req) {
     // Execute the error
     v8::TryCatch try_catch;
     // Call the callback
-    worker->callback->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
+    NanPersistentToLocal(worker->callback)->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
     // If we have an exception handle it as a fatalexception
     if (try_catch.HasCaught()) {
       node::FatalException(try_catch);
@@ -61,7 +61,7 @@ static void After(uv_work_t* work_req) {
     // process.on('uncaughtException') event.
     v8::TryCatch try_catch;
     // Call the callback
-    worker->callback->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
+    NanPersistentToLocal(worker->callback)->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
     // If we have an exception handle it as a fatalexception
     if (try_catch.HasCaught()) {
       node::FatalException(try_catch);
@@ -318,7 +318,7 @@ static Handle<Value> _map_initializeContext(Worker *worker) {
   // Unwrap the security context
   SecurityContext *context = (SecurityContext *)worker->return_value;
   // Return the value
-  return scope.Close(context->handle_);
+  return scope.Close(NanObjectWrapHandle(context));
 }
 
 NAN_METHOD(SecurityContext::InitializeContext) {
@@ -506,7 +506,7 @@ static Handle<Value> _map_initializeContextStep(Worker *worker) {
   // Unwrap the security context
   SecurityContext *context = (SecurityContext *)worker->return_value;
   // Return the value
-  return scope.Close(context->handle_);
+  return scope.Close(NanObjectWrapHandle(context));
 }
 
 NAN_METHOD(SecurityContext::InitalizeStep) {
@@ -730,7 +730,7 @@ static Handle<Value> _map_encryptMessage(Worker *worker) {
   // Unwrap the security context
   SecurityContext *context = (SecurityContext *)worker->return_value;
   // Return the value
-  return scope.Close(context->handle_);
+  return scope.Close(NanObjectWrapHandle(context));
 }
 
 NAN_METHOD(SecurityContext::EncryptMessage) {
@@ -868,7 +868,7 @@ static Handle<Value> _map_decryptMessage(Worker *worker) {
   // Unwrap the security context
   SecurityContext *context = (SecurityContext *)worker->return_value;
   // Return the value
-  return scope.Close(context->handle_);
+  return scope.Close(NanObjectWrapHandle(context));
 }
 
 NAN_METHOD(SecurityContext::DecryptMessage) {

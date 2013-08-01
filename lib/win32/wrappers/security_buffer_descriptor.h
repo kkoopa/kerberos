@@ -18,7 +18,7 @@ class SecurityBufferDescriptor : public ObjectWrap {
     SecBufferDesc secBufferDesc;
 
     SecurityBufferDescriptor();
-    SecurityBufferDescriptor(Handle<array> array);
+    SecurityBufferDescriptor(Handle<Array> array);
     ~SecurityBufferDescriptor();
 
     // Has instance check

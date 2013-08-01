@@ -84,7 +84,7 @@ NAN_METHOD(SecurityCredentials::AquireSync) {
   }
 
   // Create Security instance
-  Local<Object> security_credentials_value = constructor_template->GetFunction()->NewInstance();
+  Local<Object> security_credentials_value = NanPersistentToLocal(constructor_template)->GetFunction()->NewInstance();
 
   // Unwrap the credentials
   SecurityCredentials *security_credentials = ObjectWrap::Unwrap<SecurityCredentials>(security_credentials_value);
@@ -139,7 +139,9 @@ NAN_METHOD(SecurityCredentials::AquireSync) {
   }
 
   // Make object persistent
-  Persistent<Object> persistent(security_credentials_value);
+  Persistent<Object> persistent;
+  NanAssignPersistent(Object, persistent, security_credentials_value);
+
   // Return the object
   NanReturnValue(security_credentials_value);
 }
@@ -228,9 +230,10 @@ static Handle<Value> _map_authSSPIAquire(Worker *worker) {
   // Unpack the credentials
   SecurityCredentials *security_credentials = (SecurityCredentials *)worker->return_value;
   // Make object persistent
-  Persistent<Object> persistent = Persistent<Object>::New(security_credentials->handle_);
+  Persistent<Object> persistent;
+  NanAssignPersistent(Object, persistent, NanObjectWrapHandle(security_credentials));
   // Return the object
-  return scope.Close(persistent);
+  return scope.Close(NanObjectWrapHandle(security_credentials));
 }
 
 NAN_METHOD(SecurityCredentials::Aquire) {
@@ -291,7 +294,7 @@ NAN_METHOD(SecurityCredentials::Aquire) {
   }
 
   // Create reference object
-  Local<Object> security_credentials_value = constructor_template->GetFunction()->NewInstance();
+  Local<Object> security_credentials_value = NanPersistentToLocal(constructor_template)->GetFunction()->NewInstance();
   // Unwrap object
   SecurityCredentials *security_credentials = ObjectWrap::Unwrap<SecurityCredentials>(security_credentials_value);
 
@@ -307,7 +310,7 @@ NAN_METHOD(SecurityCredentials::Aquire) {
   Worker *worker = new Worker();
   worker->error = false;
   worker->request.data = worker;
-  worker->callback = Persistent<Function>::New(callback);
+  NanAssignPersistent(Function, worker->callback, callback);
   worker->parameters = call;
   worker->execute = _authSSPIAquire;
   worker->mapper = _map_authSSPIAquire;
@@ -418,7 +421,7 @@ void SecurityCredentials::After(uv_work_t* work_req) {
     // Execute the error
     v8::TryCatch try_catch;
     // Call the callback
-    worker->callback->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
+    NanPersistentToLocal(worker->callback)->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
     // If we have an exception handle it as a fatalexception
     if (try_catch.HasCaught()) {
       node::FatalException(try_catch);
@@ -434,7 +437,7 @@ void SecurityCredentials::After(uv_work_t* work_req) {
     // process.on('uncaughtException') event.
     v8::TryCatch try_catch;
     // Call the callback
-    worker->callback->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
+    NanPersistentToLocal(worker->callback)->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
     // If we have an exception handle it as a fatalexception
     if (try_catch.HasCaught()) {
       node::FatalException(try_catch);
