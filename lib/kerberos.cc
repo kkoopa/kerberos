@@ -35,41 +35,37 @@ typedef struct AuthGSSClientCleanCall {
   KerberosContext *context;
 } AuthGSSClientCleanCall;
 
-// VException object (causes throw in calling code)
-static Handle<Value> VException(const char *msg) {
-  HandleScope scope;
-  return ThrowException(Exception::Error(String::New(msg)));
-}
-
 Kerberos::Kerberos() : ObjectWrap() {
 }
 
 void Kerberos::Initialize(v8::Handle<v8::Object> target) {
   // Grab the scope of the call from Node
-  HandleScope scope;
+  NanScope();
   // Define a new function template
   Local<FunctionTemplate> t = FunctionTemplate::New(Kerberos::New);
-  constructor_template = Persistent<FunctionTemplate>::New(t);
-  constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-  constructor_template->SetClassName(String::NewSymbol("Kerberos"));
+  t->InstanceTemplate()->SetInternalFieldCount(1);
+  t->SetClassName(String::NewSymbol("Kerberos"));
 
   // Set up method for the Kerberos instance
-  NODE_SET_PROTOTYPE_METHOD(constructor_template, "authGSSClientInit", AuthGSSClientInit);  
-  NODE_SET_PROTOTYPE_METHOD(constructor_template, "authGSSClientStep", AuthGSSClientStep);  
-  NODE_SET_PROTOTYPE_METHOD(constructor_template, "authGSSClientUnwrap", AuthGSSClientUnwrap);
-  NODE_SET_PROTOTYPE_METHOD(constructor_template, "authGSSClientWrap", AuthGSSClientWrap);
-  NODE_SET_PROTOTYPE_METHOD(constructor_template, "authGSSClientClean", AuthGSSClientClean);
+  NODE_SET_PROTOTYPE_METHOD(t, "authGSSClientInit", AuthGSSClientInit);
+  NODE_SET_PROTOTYPE_METHOD(t, "authGSSClientStep", AuthGSSClientStep);
+  NODE_SET_PROTOTYPE_METHOD(t, "authGSSClientUnwrap", AuthGSSClientUnwrap);
+  NODE_SET_PROTOTYPE_METHOD(t, "authGSSClientWrap", AuthGSSClientWrap);
+  NODE_SET_PROTOTYPE_METHOD(t, "authGSSClientClean", AuthGSSClientClean);
+
+  NanAssignPersistent(FunctionTemplate, Kerberos::constructor_template, t);
 
   // Set the symbol
-  target->ForceSet(String::NewSymbol("Kerberos"), constructor_template->GetFunction());
+  target->ForceSet(String::NewSymbol("Kerberos"), t->GetFunction());
 }
 
-Handle<Value> Kerberos::New(const Arguments &args) {
+NAN_METHOD(Kerberos::New) {
+  NanScope();
   // Create a Kerberos instance
   Kerberos *kerberos = new Kerberos();
   // Return the kerberos object
   kerberos->Wrap(args.This());
-  return args.This();
+  NanReturnValue(args.This());
 }
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -81,7 +77,7 @@ static void _authGSSClientInit(Worker *worker) {
 
   // Allocate state
   state = (gss_client_state *)malloc(sizeof(gss_client_state));
-  
+
   // Unpack the parameter data struct
   AuthGSSClientCall *call = (AuthGSSClientCall *)worker->parameters;
   // Start the kerberos client
@@ -105,22 +101,22 @@ static void _authGSSClientInit(Worker *worker) {
 }
 
 static Handle<Value> _map_authGSSClientInit(Worker *worker) {
-  HandleScope scope;
+  NanScope();
 
   KerberosContext *context = KerberosContext::New();
   context->state = (gss_client_state *)worker->return_value;
   // Persistent<Value> _context = Persistent<Value>::New(context->handle_);
-  return scope.Close(context->handle_);
+  return scope.Close(NanObjectWrapHandle(context));
 }
 
 // Initialize method
-Handle<Value> Kerberos::AuthGSSClientInit(const Arguments &args) {
-  HandleScope scope;
+NAN_METHOD(Kerberos::AuthGSSClientInit) {
+  NanScope();
 
   // Ensure valid call
-  if(args.Length() != 3) return VException("Requires a service string uri, integer flags and a callback function");
-  if(args.Length() == 3 && !args[0]->IsString() && !args[1]->IsInt32() && !args[2]->IsFunction()) 
-      return VException("Requires a service string uri, integer flags and a callback function");    
+  if(args.Length() != 3) return NanThrowError("Requires a service string uri, integer flags and a callback function");
+  if(args.Length() == 3 && !args[0]->IsString() && !args[1]->IsInt32() && !args[2]->IsFunction())
+      return NanThrowError("Requires a service string uri, integer flags and a callback function");
 
   Local<String> service = args[0]->ToString();
   // Convert uri string to c-string
@@ -140,7 +136,7 @@ Handle<Value> Kerberos::AuthGSSClientInit(const Arguments &args) {
   Worker *worker = new Worker();
   worker->error = false;
   worker->request.data = worker;
-  worker->callback = Persistent<Function>::New(callback);
+  NanAssignPersistent(Function, worker->callback, callback);
   worker->parameters = call;
   worker->execute = _authGSSClientInit;
   worker->mapper = _map_authGSSClientInit;
@@ -148,7 +144,7 @@ Handle<Value> Kerberos::AuthGSSClientInit(const Arguments &args) {
   // Schedule the worker with lib_uv
   uv_queue_work(uv_default_loop(), &worker->request, Kerberos::Process, (uv_after_work_cb)Kerberos::After);
   // Return no value as it's callback based
-  return scope.Close(Undefined());
+  NanReturnUndefined();
 }
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -189,19 +185,19 @@ static void _authGSSClientStep(Worker *worker) {
 }
 
 static Handle<Value> _map_authGSSClientStep(Worker *worker) {
-  HandleScope scope;
+  NanScope();
   // Return the return code
   return scope.Close(Int32::New(worker->return_code));
 }
 
 // Initialize method
-Handle<Value> Kerberos::AuthGSSClientStep(const Arguments &args) {
-  HandleScope scope;
+NAN_METHOD(Kerberos::AuthGSSClientStep) {
+  NanScope();
 
   // Ensure valid call
-  if(args.Length() != 2 && args.Length() != 3) return VException("Requires a GSS context, optional challenge string and callback function");
-  if(args.Length() == 2 && !KerberosContext::HasInstance(args[0])) return VException("Requires a GSS context, optional challenge string and callback function");
-  if(args.Length() == 3 && !KerberosContext::HasInstance(args[0]) && !args[1]->IsString()) return VException("Requires a GSS context, optional challenge string and callback function");
+  if(args.Length() != 2 && args.Length() != 3) return NanThrowError("Requires a GSS context, optional challenge string and callback function");
+  if(args.Length() == 2 && !KerberosContext::HasInstance(args[0])) return NanThrowError("Requires a GSS context, optional challenge string and callback function");
+  if(args.Length() == 3 && !KerberosContext::HasInstance(args[0]) && !args[1]->IsString()) return NanThrowError("Requires a GSS context, optional challenge string and callback function");
 
   // Challenge string
   char *challenge_str = NULL;
@@ -216,7 +212,7 @@ Handle<Value> Kerberos::AuthGSSClientStep(const Arguments &args) {
     // Convert uri string to c-string
     challenge_str = (char *)calloc(challenge->Utf8Length() + 1, sizeof(char));
     // Write v8 string to c-string
-    challenge->WriteUtf8(challenge_str);    
+    challenge->WriteUtf8(challenge_str);
   }
 
   // Allocate a structure
@@ -231,7 +227,7 @@ Handle<Value> Kerberos::AuthGSSClientStep(const Arguments &args) {
   Worker *worker = new Worker();
   worker->error = false;
   worker->request.data = worker;
-  worker->callback = Persistent<Function>::New(callback);
+  NanAssignPersistent(Function, worker->callback, callback);
   worker->parameters = call;
   worker->execute = _authGSSClientStep;
   worker->mapper = _map_authGSSClientStep;
@@ -240,7 +236,7 @@ Handle<Value> Kerberos::AuthGSSClientStep(const Arguments &args) {
   uv_queue_work(uv_default_loop(), &worker->request, Kerberos::Process, (uv_after_work_cb)Kerberos::After);
 
   // Return no value as it's callback based
-  return scope.Close(Undefined());
+  NanReturnUndefined();
 }
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -278,19 +274,19 @@ static void _authGSSClientUnwrap(Worker *worker) {
 }
 
 static Handle<Value> _map_authGSSClientUnwrap(Worker *worker) {
-  HandleScope scope;
+  NanScope();
   // Return the return code
   return scope.Close(Int32::New(worker->return_code));
 }
 
 // Initialize method
-Handle<Value> Kerberos::AuthGSSClientUnwrap(const Arguments &args) {
-  HandleScope scope;
+NAN_METHOD(Kerberos::AuthGSSClientUnwrap) {
+  NanScope();
 
   // Ensure valid call
-  if(args.Length() != 2 && args.Length() != 3) return VException("Requires a GSS context, optional challenge string and callback function");
-  if(args.Length() == 2 && !KerberosContext::HasInstance(args[0]) && !args[1]->IsFunction()) return VException("Requires a GSS context, optional challenge string and callback function");
-  if(args.Length() == 3 && !KerberosContext::HasInstance(args[0]) && !args[1]->IsString() && !args[2]->IsFunction()) return VException("Requires a GSS context, optional challenge string and callback function");
+  if(args.Length() != 2 && args.Length() != 3) return NanThrowError("Requires a GSS context, optional challenge string and callback function");
+  if(args.Length() == 2 && !KerberosContext::HasInstance(args[0]) && !args[1]->IsFunction()) return NanThrowError("Requires a GSS context, optional challenge string and callback function");
+  if(args.Length() == 3 && !KerberosContext::HasInstance(args[0]) && !args[1]->IsString() && !args[2]->IsFunction()) return NanThrowError("Requires a GSS context, optional challenge string and callback function");
 
   // Challenge string
   char *challenge_str = NULL;
@@ -305,7 +301,7 @@ Handle<Value> Kerberos::AuthGSSClientUnwrap(const Arguments &args) {
     // Convert uri string to c-string
     challenge_str = (char *)calloc(challenge->Utf8Length() + 1, sizeof(char));
     // Write v8 string to c-string
-    challenge->WriteUtf8(challenge_str);    
+    challenge->WriteUtf8(challenge_str);
   }
 
   // Allocate a structure
@@ -320,7 +316,7 @@ Handle<Value> Kerberos::AuthGSSClientUnwrap(const Arguments &args) {
   Worker *worker = new Worker();
   worker->error = false;
   worker->request.data = worker;
-  worker->callback = Persistent<Function>::New(callback);
+  NanAssignPersistent(Function, worker->callback, callback);
   worker->parameters = call;
   worker->execute = _authGSSClientUnwrap;
   worker->mapper = _map_authGSSClientUnwrap;
@@ -329,7 +325,7 @@ Handle<Value> Kerberos::AuthGSSClientUnwrap(const Arguments &args) {
   uv_queue_work(uv_default_loop(), &worker->request, Kerberos::Process, (uv_after_work_cb)Kerberos::After);
 
   // Return no value as it's callback based
-  return scope.Close(Undefined());
+  NanReturnUndefined();
 }
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -341,7 +337,7 @@ static void _authGSSClientWrap(Worker *worker) {
 
   // Unpack the parameter data struct
   AuthGSSClientWrapCall *call = (AuthGSSClientWrapCall *)worker->parameters;
-  user_name = call->user_name;  
+  user_name = call->user_name;
 
   // Check what kind of challenge we have
   if(call->user_name == NULL) {
@@ -368,24 +364,24 @@ static void _authGSSClientWrap(Worker *worker) {
 }
 
 static Handle<Value> _map_authGSSClientWrap(Worker *worker) {
-  HandleScope scope;
+  NanScope();
   // Return the return code
   return scope.Close(Int32::New(worker->return_code));
 }
 
 // Initialize method
-Handle<Value> Kerberos::AuthGSSClientWrap(const Arguments &args) {
-  HandleScope scope;
+NAN_METHOD(Kerberos::AuthGSSClientWrap) {
+  NanScope();
 
   // Ensure valid call
-  if(args.Length() != 3 && args.Length() != 4) return VException("Requires a GSS context, the result from the authGSSClientResponse after authGSSClientUnwrap, optional user name and callback function");
-  if(args.Length() == 3 && !KerberosContext::HasInstance(args[0]) && !args[1]->IsString() && !args[2]->IsFunction()) return VException("Requires a GSS context, the result from the authGSSClientResponse after authGSSClientUnwrap, optional user name and callback function");
-  if(args.Length() == 4 && !KerberosContext::HasInstance(args[0]) && !args[1]->IsString() && !args[2]->IsString() && !args[2]->IsFunction()) return VException("Requires a GSS context, the result from the authGSSClientResponse after authGSSClientUnwrap, optional user name and callback function");
+  if(args.Length() != 3 && args.Length() != 4) return NanThrowError("Requires a GSS context, the result from the authGSSClientResponse after authGSSClientUnwrap, optional user name and callback function");
+  if(args.Length() == 3 && !KerberosContext::HasInstance(args[0]) && !args[1]->IsString() && !args[2]->IsFunction()) return NanThrowError("Requires a GSS context, the result from the authGSSClientResponse after authGSSClientUnwrap, optional user name and callback function");
+  if(args.Length() == 4 && !KerberosContext::HasInstance(args[0]) && !args[1]->IsString() && !args[2]->IsString() && !args[2]->IsFunction()) return NanThrowError("Requires a GSS context, the result from the authGSSClientResponse after authGSSClientUnwrap, optional user name and callback function");
 
   // Challenge string
   char *challenge_str = NULL;
   char *user_name_str = NULL;
-  
+
   // Let's unpack the kerberos context
   Local<Object> object = args[0]->ToObject();
   KerberosContext *kerberos_context = KerberosContext::Unwrap<KerberosContext>(object);
@@ -395,7 +391,7 @@ Handle<Value> Kerberos::AuthGSSClientWrap(const Arguments &args) {
   // Convert uri string to c-string
   challenge_str = (char *)calloc(challenge->Utf8Length() + 1, sizeof(char));
   // Write v8 string to c-string
-  challenge->WriteUtf8(challenge_str);    
+  challenge->WriteUtf8(challenge_str);
 
   // If we have a user string
   if(args.Length() == 4) {
@@ -420,7 +416,7 @@ Handle<Value> Kerberos::AuthGSSClientWrap(const Arguments &args) {
   Worker *worker = new Worker();
   worker->error = false;
   worker->request.data = worker;
-  worker->callback = Persistent<Function>::New(callback);
+  NanAssignPersistent(Function, worker->callback, callback);
   worker->parameters = call;
   worker->execute = _authGSSClientWrap;
   worker->mapper = _map_authGSSClientWrap;
@@ -429,7 +425,7 @@ Handle<Value> Kerberos::AuthGSSClientWrap(const Arguments &args) {
   uv_queue_work(uv_default_loop(), &worker->request, Kerberos::Process, (uv_after_work_cb)Kerberos::After);
 
   // Return no value as it's callback based
-  return scope.Close(Undefined());
+  NanReturnUndefined();
 }
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -459,18 +455,18 @@ static void _authGSSClientClean(Worker *worker) {
 }
 
 static Handle<Value> _map_authGSSClientClean(Worker *worker) {
-  HandleScope scope;
+  NanScope();
   // Return the return code
   return scope.Close(Int32::New(worker->return_code));
 }
 
 // Initialize method
-Handle<Value> Kerberos::AuthGSSClientClean(const Arguments &args) {
-  HandleScope scope;
+NAN_METHOD(Kerberos::AuthGSSClientClean) {
+  NanScope();
 
   // // Ensure valid call
-  if(args.Length() != 2) return VException("Requires a GSS context and callback function");
-  if(!KerberosContext::HasInstance(args[0]) && !args[1]->IsFunction()) return VException("Requires a GSS context and callback function");
+  if(args.Length() != 2) return NanThrowError("Requires a GSS context and callback function");
+  if(!KerberosContext::HasInstance(args[0]) && !args[1]->IsFunction()) return NanThrowError("Requires a GSS context and callback function");
 
   // Let's unpack the kerberos context
   Local<Object> object = args[0]->ToObject();
@@ -487,7 +483,7 @@ Handle<Value> Kerberos::AuthGSSClientClean(const Arguments &args) {
   Worker *worker = new Worker();
   worker->error = false;
   worker->request.data = worker;
-  worker->callback = Persistent<Function>::New(callback);
+  NanAssignPersistent(Function, worker->callback, callback);
   worker->parameters = call;
   worker->execute = _authGSSClientClean;
   worker->mapper = _map_authGSSClientClean;
@@ -496,7 +492,7 @@ Handle<Value> Kerberos::AuthGSSClientClean(const Arguments &args) {
   uv_queue_work(uv_default_loop(), &worker->request, Kerberos::Process, (uv_after_work_cb)Kerberos::After);
 
   // Return no value as it's callback based
-  return scope.Close(Undefined());
+  NanReturnUndefined();
 }
 
 // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -520,12 +516,12 @@ void Kerberos::After(uv_work_t* work_req) {
   if(worker->error) {
     v8::Local<v8::Value> err = v8::Exception::Error(v8::String::New(worker->error_message));
     Local<Object> obj = err->ToObject();
-    obj->Set(NODE_PSYMBOL("code"), Int32::New(worker->error_code));
+    obj->Set(String::New("code"), Int32::New(worker->error_code));
     v8::Local<v8::Value> args[2] = { err, v8::Local<v8::Value>::New(v8::Null()) };
     // Execute the error
     v8::TryCatch try_catch;
     // Call the callback
-    worker->callback->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
+    NanPersistentToLocal(worker->callback)->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
     // If we have an exception handle it as a fatalexception
     if (try_catch.HasCaught()) {
       node::FatalException(try_catch);
@@ -541,7 +537,7 @@ void Kerberos::After(uv_work_t* work_req) {
     // process.on('uncaughtException') event.
     v8::TryCatch try_catch;
     // Call the callback
-    worker->callback->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
+    NanPersistentToLocal(worker->callback)->Call(v8::Context::GetCurrent()->Global(), ARRAY_SIZE(args), args);
     // If we have an exception handle it as a fatalexception
     if (try_catch.HasCaught()) {
       node::FatalException(try_catch);
@@ -555,7 +551,7 @@ void Kerberos::After(uv_work_t* work_req) {
 
 // Exporting function
 extern "C" void init(Handle<Object> target) {
-  HandleScope scope;
+  NanScope();
   Kerberos::Initialize(target);
   KerberosContext::Initialize(target);
 }

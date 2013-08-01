@@ -5,6 +5,15 @@
       'cflags!': [ '-fno-exceptions' ],
       'cflags_cc!': [ '-fno-exceptions' ],
       'conditions': [
+        ['OS=="linux"', {
+          'sources': [ 'lib/kerberos.cc', 'lib/worker.cc', 'lib/kerberosgss.c', 'lib/base64.c', 'lib/kerberos_context.cc' ],
+          "link_settings": {
+            "libraries": [
+              "-lkrb5",
+              "-lgssapi_krb5"
+            ]
+          }
+        }],
         ['OS=="mac"', {
           'sources': [ 'lib/kerberos.cc', 'lib/worker.cc', 'lib/kerberosgss.c', 'lib/base64.c', 'lib/kerberos_context.cc' ],
           'defines': [

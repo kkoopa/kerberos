@@ -20,10 +20,10 @@ extern "C" {
 using namespace v8;
 using namespace node;
 
-class SecurityContext : public ObjectWrap {  
-  public:    
+class SecurityContext : public ObjectWrap {
+  public:
     SecurityContext();
-    ~SecurityContext();    
+    ~SecurityContext();
 
     // Security info package
     PSecPkgInfo m_PkgInfo;
@@ -44,38 +44,38 @@ class SecurityContext : public ObjectWrap {
     static inline bool HasInstance(Handle<Value> val) {
       if (!val->IsObject()) return false;
       Local<Object> obj = val->ToObject();
-      return constructor_template->HasInstance(obj);
+      return NanPersistentToLocal(constructor_template)->HasInstance(obj);
     };
 
     // Functions available from V8
-    static void Initialize(Handle<Object> target);    
+    static void Initialize(Handle<Object> target);
 
-    static Handle<Value> InitializeContext(const Arguments &args);
-    static Handle<Value> InitializeContextSync(const Arguments &args);
-    
-    static Handle<Value> InitalizeStep(const Arguments &args);
-    static Handle<Value> InitalizeStepSync(const Arguments &args);
+    static NAN_METHOD(InitializeContext);
+    static NAN_METHOD(InitializeContextSync);
 
-    static Handle<Value> DecryptMessage(const Arguments &args);
-    static Handle<Value> DecryptMessageSync(const Arguments &args);
+    static NAN_METHOD(InitalizeStep);
+    static NAN_METHOD(InitalizeStepSync);
 
-    static Handle<Value> QueryContextAttributesSync(const Arguments &args);
-    static Handle<Value> QueryContextAttributes(const Arguments &args);
+    static NAN_METHOD(DecryptMessage);
+    static NAN_METHOD(DecryptMessageSync);
 
-    static Handle<Value> EncryptMessageSync(const Arguments &args);
-    static Handle<Value> EncryptMessage(const Arguments &args);
+    static NAN_METHOD(QueryContextAttributesSync);
+    static NAN_METHOD(QueryContextAttributes);
+
+    static NAN_METHOD(EncryptMessageSync);
+    static NAN_METHOD(EncryptMessage);
 
     // Payload getter
-    static Handle<Value> PayloadGetter(Local<String> property, const AccessorInfo& info);
+    static NAN_GETTER(PayloadGetter);
     // hasContext getter
-    static Handle<Value> HasContextGetter(Local<String> property, const AccessorInfo& info);
+    static NAN_GETTER(HasContextGetter);
 
     // Constructor used for creating new Long objects from C++
     static Persistent<FunctionTemplate> constructor_template;
-    
+
   private:
     // Create a new instance
-    static Handle<Value> New(const Arguments &args);
+    static NAN_METHOD(New);
     // // Handles the uv calls
     // static void Process(uv_work_t* work_req);
     // // Called after work is done

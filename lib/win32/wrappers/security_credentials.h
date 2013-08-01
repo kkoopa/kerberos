@@ -12,6 +12,7 @@
 #include <tchar.h>
 #include "../worker.h"
 #include <uv.h>
+#include "../../nan.h"
 
 extern "C" {
   #include "../kerberos_sspi.h"
@@ -28,15 +29,15 @@ extern "C" {
 using namespace v8;
 using namespace node;
 
-class SecurityCredentials : public ObjectWrap {  
-  public:    
+class SecurityCredentials : public ObjectWrap {
+  public:
     SecurityCredentials();
-    ~SecurityCredentials();    
+    ~SecurityCredentials();
 
     // Pointer to context object
     SEC_WINNT_AUTH_IDENTITY m_Identity;
     // credentials
-    CredHandle m_Credentials;    
+    CredHandle m_Credentials;
     // Expiry time for ticket
     TimeStamp Expiration;
 
@@ -44,20 +45,20 @@ class SecurityCredentials : public ObjectWrap {
     static inline bool HasInstance(Handle<Value> val) {
       if (!val->IsObject()) return false;
       Local<Object> obj = val->ToObject();
-      return constructor_template->HasInstance(obj);
+      return NanPersistentToLocal(constructor_template)->HasInstance(obj);
     };
 
     // Functions available from V8
-    static void Initialize(Handle<Object> target);    
-    static Handle<Value> AquireSync(const Arguments &args);
-    static Handle<Value> Aquire(const Arguments &args);
+    static void Initialize(Handle<Object> target);
+    static NAN_METHOD(AquireSync);
+    static NAN_METHOD(Aquire);
 
     // Constructor used for creating new Long objects from C++
     static Persistent<FunctionTemplate> constructor_template;
-    
+
   private:
     // Create a new instance
-    static Handle<Value> New(const Arguments &args);
+    static NAN_METHOD(New);
     // Handles the uv calls
     static void Process(uv_work_t* work_req);
     // Called after work is done

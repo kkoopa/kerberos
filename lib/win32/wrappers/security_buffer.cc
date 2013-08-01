@@ -14,11 +14,6 @@
 
 using namespace node;
 
-static Handle<Value> VException(const char *msg) {
-  HandleScope scope;
-  return ThrowException(Exception::Error(String::New(msg)));
-};
-
 Persistent<FunctionTemplate> SecurityBuffer::constructor_template;
 
 SecurityBuffer::SecurityBuffer(uint32_t security_type, size_t size) : ObjectWrap() {
@@ -28,7 +23,7 @@ SecurityBuffer::SecurityBuffer(uint32_t security_type, size_t size) : ObjectWrap
   // Set up the data in the sec_buffer
   this->sec_buffer.BufferType = security_type;
   this->sec_buffer.cbBuffer = (unsigned long)size;
-  this->sec_buffer.pvBuffer = this->data;  
+  this->sec_buffer.pvBuffer = this->data;
 }
 
 SecurityBuffer::SecurityBuffer(uint32_t security_type, size_t size, void *data) : ObjectWrap() {
@@ -38,25 +33,25 @@ SecurityBuffer::SecurityBuffer(uint32_t security_type, size_t size, void *data) 
   // Set up the data in the sec_buffer
   this->sec_buffer.BufferType = security_type;
   this->sec_buffer.cbBuffer = (unsigned long)size;
-  this->sec_buffer.pvBuffer = this->data;  
+  this->sec_buffer.pvBuffer = this->data;
 }
 
 SecurityBuffer::~SecurityBuffer() {
   free(this->data);
 }
 
-Handle<Value> SecurityBuffer::New(const Arguments &args) {
-  HandleScope scope;  
+NAN_METHOD(SecurityBuffer::New) {
+  NanScope();
   SecurityBuffer *security_obj;
 
   if(args.Length() != 2)
-    return VException("Two parameters needed integer buffer type and  [32 bit integer/Buffer] required");
+    return NanThrowError("Two parameters needed integer buffer type and  [32 bit integer/Buffer] required");
 
   if(!args[0]->IsInt32())
-    return VException("Two parameters needed integer buffer type and  [32 bit integer/Buffer] required");
+    return NanThrowError("Two parameters needed integer buffer type and  [32 bit integer/Buffer] required");
 
   if(!args[1]->IsInt32() && !Buffer::HasInstance(args[1]))
-    return VException("Two parameters needed integer buffer type and  [32 bit integer/Buffer] required");
+    return NanThrowError("Two parameters needed integer buffer type and  [32 bit integer/Buffer] required");
 
   // Unpack buffer type
   uint32_t buffer_type = args[0]->ToUint32()->Value();
@@ -74,37 +69,38 @@ Handle<Value> SecurityBuffer::New(const Arguments &args) {
     // Create new SecurityBuffer
     security_obj = new SecurityBuffer(buffer_type, length, data);
   }
-  
+
   // Wrap it
   security_obj->Wrap(args.This());
   // Return the object
-  return args.This();    
+  NanReturnValue(args.This());
 }
 
-Handle<Value> SecurityBuffer::ToBuffer(const Arguments &args) {
-  HandleScope scope; 
+NAN_METHOD(SecurityBuffer::ToBuffer) {
+  NanScope();
 
   // Unpack the Security Buffer object
   SecurityBuffer *security_obj = ObjectWrap::Unwrap<SecurityBuffer>(args.This());
   // Create a Buffer
-  Buffer *buffer = Buffer::New((char *)security_obj->data, (size_t)security_obj->size);
+  Local<Object> buffer = NanNewBufferHandle((char *)security_obj->data, (size_t)security_obj->size);
 
   // Return the buffer
-  return scope.Close(buffer->handle_);  
+  NanReturnValue(buffer);
 }
 
 void SecurityBuffer::Initialize(Handle<Object> target) {
   // Grab the scope of the call from Node
-  HandleScope scope;
+  NanScope();
   // Define a new function template
   Local<FunctionTemplate> t = FunctionTemplate::New(New);
-  constructor_template = Persistent<FunctionTemplate>::New(t);
-  constructor_template->InstanceTemplate()->SetInternalFieldCount(1);
-  constructor_template->SetClassName(String::NewSymbol("SecurityBuffer"));
+  t->InstanceTemplate()->SetInternalFieldCount(1);
+  t->SetClassName(String::NewSymbol("SecurityBuffer"));
 
   // Set up method for the Kerberos instance
-  NODE_SET_PROTOTYPE_METHOD(constructor_template, "toBuffer", ToBuffer);
- 
+  NODE_SET_PROTOTYPE_METHOD(t, "toBuffer", ToBuffer);
+
+  NanAssignPersistent(FunctionTemplate, contstructor_template, t);
+
   // Set up class
-  target->Set(String::NewSymbol("SecurityBuffer"), constructor_template->GetFunction());  
+  target->Set(String::NewSymbol("SecurityBuffer"), t->GetFunction());  
 }
