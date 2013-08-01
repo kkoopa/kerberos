@@ -44,8 +44,7 @@ class SecurityCredentials : public ObjectWrap {
     static inline bool HasInstance(Handle<Value> val) {
       if (!val->IsObject()) return false;
       Local<Object> obj = val->ToObject();
-      return true;
-      //return NanPersistentToLocal(constructor_template)->HasInstance(obj);
+      return NanPersistentToLocal(constructor_template)->HasInstance(obj);
     };
 
     // Functions available from V8
