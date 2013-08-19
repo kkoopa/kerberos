@@ -2,6 +2,7 @@
   'targets': [
     {
       'target_name': 'kerberos',      
+      'include_dirs': ["<!(node -p -e \"require('path').dirname(require.resolve('nan'))\")"],
       'cflags!': [ '-fno-exceptions' ],
       'cflags_cc!': [ '-fno-exceptions' ],
       'conditions': [

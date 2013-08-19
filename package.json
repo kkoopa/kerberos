@@ -15,6 +15,9 @@
     "security",
     "authentication"
   ],
+  "dependencies": {
+    "nan": "~0.3.0"
+  },
   "devDependencies": {
     "nodeunit": "latest"
   },
