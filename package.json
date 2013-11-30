@@ -16,7 +16,7 @@
     "authentication"
   ],
   "dependencies": {
-    "nan": "~0.3.0"
+    "nan": "~0.6.0"
   },
   "devDependencies": {
     "nodeunit": "latest"
