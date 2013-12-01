@@ -507,7 +507,7 @@ void Kerberos::Process(uv_work_t* work_req) {
 
 void Kerberos::After(uv_work_t* work_req) {
   // Grab the scope of the call from Node
-  v8::HandleScope scope;
+  NanScope();
 
   // Get the worker reference
   Worker *worker = static_cast<Worker*>(work_req->data);
@@ -517,7 +517,7 @@ void Kerberos::After(uv_work_t* work_req) {
     v8::Local<v8::Value> err = v8::Exception::Error(v8::String::New(worker->error_message));
     Local<Object> obj = err->ToObject();
     obj->Set(String::New("code"), Int32::New(worker->error_code));
-    v8::Local<v8::Value> args[2] = { err, v8::Local<v8::Value>::New(v8::Null()) };
+    v8::Local<v8::Value> args[2] = { err, NanNewLocal<v8::Value>(v8::Null()) };
     // Execute the error
     v8::TryCatch try_catch;
     // Call the callback
@@ -530,7 +530,7 @@ void Kerberos::After(uv_work_t* work_req) {
     // // Map the data
     v8::Handle<v8::Value> result = worker->mapper(worker);
     // Set up the callback with a null first
-    v8::Handle<v8::Value> args[2] = { v8::Local<v8::Value>::New(v8::Null()), result};
+    v8::Handle<v8::Value> args[2] = { NanNewLocal<v8::Value>(v8::Null()), result};
     // Wrap the callback function call in a TryCatch so that we can call
     // node's FatalException afterwards. This makes it possible to catch
     // the exception from JavaScript land using the
